@@ -1,0 +1,74 @@
+---
+title: "Discussion - Recommender Systems"
+author: "Bikram Barua"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+editor_options: 
+  chunk_output_type: console
+---
+
+# Discussion - Recommender Systems
+
+## Overview
+
+Your task is to analyze an existing recommender system that you find interesting.  You should:
+
+Perform a Scenario Design analysis as described below.  Consider whether it makes sense for your selected recommender system to perform scenario design twice, once for the organization (e.g. Amazon.com) and once for the organization's customers.
+
+Attempt to reverse engineer what you can about the site, from the site interface and any available information that you can find on the Internet or elsewhere.
+
+Include specific recommendations about how to improve the site's recommendation capabilities going forward. 
+
+## [UberEats](https://www.ubereats.com)
+
+Uber Eats has hundreds of restaurants to choose from. When you open the app, you can search for something you like, tap to add it to your order. When you’re ready to check out, you’ll see your address, an estimated delivery time, and the price of the order including tax and delivery fee. You’ll also be able to see the name of the delivery person and photo and track the delivery on their App.
+
+## UberEat's Recommender System
+
+UberEat's Recommender System is part of the technical stack built internally by [Uber Engineering](https://eng.uber.com/). It uses Graph Learning to power recommendations in food discovery. 
+
+## Scenario Design: UberEats  
+
+1. Who are your target users?
+
+The recommendations of the marketplace are used both by their users and restaurants.
+
+2. What are their key goals?
+
+The main goal is to help users search for local food and provide a personalized experience for each individual through restaurant recommendations. There are times when eaters just don’t know what they want to eat, their goal is to help them through the process to their satisfaction.
+
+3. How can you help them accomplish those goals?
+
+I would like to provide detailed analytical and descriptive reviews with focus on nutrition value and calorie intake on local food choices and local restaurants. I hope that would help the Recommender System to make better choices for the users.
+ 
+
+## Reverse Engineering UberEat's Recommender System
+The Uber Eats app is a portal to more than 320,000 restaurants across 500+ cities in 36 countries. It tries to provide a seamless, easy-to-navigate interface displaying users the dishes in their local restaurants and cuisines. 
+
+Based on the historical transactions, it has built ML models to better understand user's queries and provides recommendations during the food search/ordering process. The research shows that the efficacy of graph learning methods on recommendation tasks. Applying this idea to Uber Eats, they have developed graph learning techniques to identify the foods that are most likely to appeal to an individual user. This process improves the quality and relevance of our food and restaurant recommendations on the platform.
+
+To understand the recommendation process, it would be helpful to know the basics of how graph learning works. Many machine learning tasks can be performed on data structured as graphs by learning representations of the nodes. The representations can encode properties of the structure of the graph. For example, Uber Eats data model don’t only use order history but also uses the past Uber Eats orders of similar users to inform order suggestions.
+
+To obtain representations with such properties, vectors are calculated for each node in the graph. A node can represent users, restaurants and food items. The idea of the model is to build a graph which maps the user node to vector representation of its preferred choices and similar vector representations.
+
+Uber Eats has opted for a graph neural network (GNN)-based approach to obtain encoding functions for the vector representations.The basic idea behind GNNs consists of using a neural network to obtain a representation for a node by aggregating the representations of neighboring nodes in a recursive fashion limited to a certain depth. GNNs require only a fixed amount of parameters that do not depend on the size of the graph, making learning scalable to large graphs.
+
+Ref Image: [Uber Eats graph with layers](https://1fykyq3mdn5r21tpna3wkdyi-wpengine.netdna-ssl.com/wp-content/uploads/2019/12/image9-1.png)
+
+Uber Eats recommendation system has two sub-systems. The first sub-systems is candidate generation which is food, menu and restaurants. The second sub-system is user personalized ranking which is a fully-fledged ML model that ranks the dishes and restaurants based on additional contextual information like the day, time and location. To improve Uber Eats recommendations, two bipartite graphs are created.
+
+Once the representations of the nodes using the trained GNN is created, the distance between the node representations is used to approximate the similarity between them. Mathematical calculations for dot product and cosine similarity is used improve accuracy of the prediction between the user and the items.
+
+
+## Improving UberEat's Recommender System
+
+I would like to recommend enhancements to the user personalization system. User's diet preferences change with time due to health, religion and other social factors. UberEats should allow the user to input their preferences, which will then flow thru their Recommender System before providing the users with their food options.
+
+
+## References  
+
+1) [Most valuable application of machine learning ](https://towardsdatascience.com/recommender-systems-the-most-valuable-application-of-machine-learning-2bc6903c63ce)  
+
+2)  [Uber Eats Graph Learning](https://eng.uber.com/uber-eats-graph-learning/)

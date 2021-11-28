@@ -1,0 +1,229 @@
+---
+title: "Document Classification"
+author: "Bikram Barua"
+date: "11/11/2021"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+editor_options: 
+  chunk_output_type: console
+---
+
+# Project 4 (Document Classification)
+
+### Load the libraries
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(R.utils)
+library(readr)
+library(stringr)
+library(tidytext)
+library(dplyr)
+library(tidyr)
+library(tm)
+library(RTextTools)
+library(wordcloud2)
+library(wordcloud)
+library(e1071)
+```
+
+### Introduction
+
+The task is to assign the documents to one or more classes or categories. For this project we have a spam and ham folders with set of documents. Classification techniques can be applied to discern messages, understand routing, determine the language of a text, analyse sentiment etc.
+
+The dataset is taken from using the [publiccorpus_link](https://spamassassin.apache.org/old/publiccorpus/)
+The files used are 20030228_easy_ham.tar.bz2  and 20030228_spam.tar.bz2
+
+##### Read the spam and ham files from the local PC
+
+```{r message=FALSE, warning=FALSE}
+
+############# spam file processing #################
+spam_path <- "C:/MSDS/Project4/spam/spam/"
+spam_filenames <- list.files(spam_path)
+              
+spam_docs <- NA
+# Iterate the files
+for (i in 1:length(spam_filenames)) {
+  full_path <- paste0(spam_path, "/", spam_filenames[i])
+  text <- readLines(full_path)
+  text_in_file <- list(paste(text, collapse="\n"))
+  spam_docs <- c(spam_docs, text_in_file)
+  
+}
+spam_df <-as.data.frame(unlist(spam_docs),stringsAsFactors = FALSE)
+spam_df$type <- "spam"
+colnames(spam_df) <- c("text","type")
+
+################ ham file processing #################
+ham_path <- "C:/MSDS/Project4/easy_ham/easy_ham/"
+ham_filenames <- list.files(ham_path)
+
+ham_docs <- NA
+# Iterate the files
+for (i in 1:length(ham_filenames)) {
+  full_path <- paste0(ham_path, "/", ham_filenames[i])
+  text <- readLines(full_path)
+  text_in_file <- list(paste(text, collapse="\n"))
+  ham_docs <- c(ham_docs, text_in_file)
+}
+
+ham_df <-as.data.frame(unlist(ham_docs),stringsAsFactors = FALSE)
+ham_df$type <- "ham"
+colnames(ham_df) <- c("text","type")
+
+# Merge both dataframes
+spam_ham_df <- rbind(ham_df, spam_df)
+str(spam_ham_df)
+
+```
+
+
+##### Randomize the dataframe
+```{r}
+set.seed(45)
+rows <- sample(nrow(spam_ham_df))
+
+random_df <- spam_ham_df[rows, ]
+```
+
+
+
+##### Clean data with Corpus
+```{r message=FALSE, warning=FALSE}
+
+
+rand_corpus <- Corpus(VectorSource(random_df$text))
+
+
+# Translate all letters to lower case
+lower_corpus <- tm_map(rand_corpus, tolower)
+
+# Clean data
+clean_corpus<- tm_map(rand_corpus,content_transformer(gsub), pattern="\\W",replace=" ")
+
+removeURL <- function(x) gsub("http^\\s\\s*", "", x)%>% 
+clean_corpus <- tm_map(clean_corpus, content_transformer(removeURL))
+
+# remove numbers
+clean_corpus <- tm_map(clean_corpus, removeNumbers)
+# remove punctuation
+clean_corpus <- tm_map(clean_corpus, removePunctuation)
+# remove stop words
+clean_corpus <- tm_map(clean_corpus, removeWords, stopwords())
+# remove whitespace
+clean_corpus <- tm_map(clean_corpus, stripWhitespace)
+
+```
+
+
+##### Create Document Term Matrix
+```{r}
+email_dtm <- DocumentTermMatrix(clean_corpus)
+
+# Most frequent terms for each document:
+head(findMostFreqTerms(email_dtm))
+# Removing Sparse terms
+email_dtm = removeSparseTerms(email_dtm, 0.10)
+inspect(email_dtm)
+
+```
+
+##### Seperate Spam and Ham text
+```{r}
+
+## Spam
+spam_only <- which(random_df$type == "spam")
+spam_only[1:5]
+
+## Ham
+ham_only <- which(random_df$type == "ham")
+ham_only[1:5]
+
+```
+
+
+##### Create Word Cloud for Spam emails
+```{r}
+wordcloud(clean_corpus[spam_only], min.freq=50, max.words=75, random.order=FALSE, rot.per=0.60, 
+          colors=c(1:4),random.color=TRUE)
+```
+
+##### Create Word Cloud for Ham emails
+```{r}
+wordcloud(clean_corpus[ham_only], min.freq=50, max.words=75, random.order=FALSE, rot.per=0.60, 
+          colors=c(1:4),random.color=TRUE)
+```
+
+
+### Building the Spam filter
+```{r}
+## Divide the corpus into training and test datasets
+# Split the dataframe
+training_df <- random_df[1:1800, ]
+test_df <- random_df[1801:3004, ]
+
+# Split the Corpus
+corpus_train <- clean_corpus[1:800]
+corpus_test <- clean_corpus[1801:3004]
+
+```
+
+
+##### Create DocumentTermMatrix for training and test
+```{r}
+training_dtm <- DocumentTermMatrix(corpus_train)
+test_dtm <- DocumentTermMatrix(corpus_test)
+
+```
+
+
+##### Create the function to convert count information to “Yes” or “No”
+
+```{r}
+# For Naive Bayes classification to work it needs to be present or absent on each word that is in a message. This is used to convert the document-term matrices
+convert_count <- function(x) {
+  y <- ifelse(x > 0, 1,0)
+  y <- factor(y, levels=c(0,1), labels=c("No", "Yes"))
+  y
+}
+```
+
+
+##### Convert the Document-Term Matrix
+```{r}
+training_dtm <- apply(training_dtm, 2, convert_count)
+test_dtm <- apply(test_dtm, 2, convert_count)
+
+```
+
+
+##### The Naive Bayes Function
+```{r}
+##training_classifier <- naiveBayes(training_dtm, factor(training_df$type))
+##class(training_classifier)
+```
+
+
+##### Predict Function to test model 
+```{r}
+##test_pred <- predict(training_classifier, newdata=test_dtm)
+```
+
+##### Check predictions 
+```{r}
+##table(test_pred, test_df$type)
+```
+
+### Conclusion
+Naive Bayes classifier is a classification algorithm based on Bayes’s theorem. It considers all the features of a data object to be independent of each other. It is very fast and useful for large datasets. It achieves very accurate results with very little training.
+
+Using the Naive Bayes method is one of the best methods for spam filtering, the results would have correctly classified the ham and spam emails. Unfortuantely, I ran into an error "all arguments must have the same length" in the naiveBayes function.
+
+
+

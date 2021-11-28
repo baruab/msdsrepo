@@ -1,0 +1,218 @@
+---
+title: "DATA_607_Week10_Assignment"
+author: "Bikram Barua"
+date: "10/31/2021"
+output: rmdformats::readthedown
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Sentiment Analysis
+
+
+# Load sentiment data dictionaries
+## Get AFINN sentiments
+```{r}
+library(tidytext)
+
+get_sentiments("afinn")
+```
+
+## Get bing sentiments
+
+```{r}
+get_sentiments("bing")
+```
+
+
+## Get nrc sentiments
+```{r}
+get_sentiments("nrc")
+```
+
+
+# Load book-related data using Gutenbergr
+## Lookup Authors
+```{r}
+library(gutenbergr)
+
+head(gutenberg_metadata$author)
+```
+
+
+
+## Look up books by Washington Irving
+```{r}
+library(dplyr)
+library(stringr)
+
+
+gutenberg_metadata %>%
+  filter(author == "Irving, Washington")
+
+
+my_books <- gutenberg_works()  %>%
+  filter(author == "Irving, Washington")
+```
+
+
+# Word Analysis
+## List the words in books by Washington Irving
+
+```{r}
+
+irving_books <- gutenberg_download(my_books$gutenberg_id,
+                            
+                            mirror = "http://aleph.gutenberg.org")
+
+
+irving_book_words <-  irving_books %>%
+  mutate(
+    linenumber = row_number(),
+    chapter = cumsum(str_detect(text, 
+                                regex("^chapter [\\divxlc]", 
+                                      ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+
+
+```
+
+
+## Filter by negative sentiments in words
+
+```{r}
+bing_negative <- get_sentiments("bing") %>% 
+  filter(sentiment == "negative")
+
+irving_book_words %>%
+  inner_join(bing_negative, word=word) %>%
+  count(word, sort = TRUE)
+```
+
+
+## List the sentiments by book id
+```{r}
+library(tidyr)
+
+irving_sentiment <- irving_book_words %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(gutenberg_id, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>%   mutate(sentiment = positive - negative)
+
+```
+# Plot graphs
+## Plot the sentiment graph across all books
+```{r}
+library(ggplot2)
+
+ggplot(irving_sentiment, aes(index, sentiment, fill = gutenberg_id)) +
+  geom_col(show.legend = FALSE) 
+```
+
+
+## Tabular view of sentiment with count
+```{r}
+library(kableExtra)
+
+bing_word_counts <- irving_book_words %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+
+ bing_word_counts %>% kbl() %>% 
+  kable_material(c("striped", "hover")) %>%
+  scroll_box(width = "800px", height = "600px") %>%
+  kable_styling(fixed_thead = T, bootstrap_options = "striped", full_width = F, position = "left")
+```
+
+
+## Plot sentiment by positive/negative
+
+```{r}
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  slice_max(n, n = 10) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = "Contribution to sentiment",
+       y = NULL)
+
+```
+
+
+# Word cloud
+## List Stop words
+
+```{r}
+custom_stop_words <- bind_rows(tibble(word = c("miss"),  
+                                      lexicon = c("custom")), 
+                               stop_words)
+```
+
+
+## Word cloud in Irving books
+
+```{r}
+library(wordcloud)
+
+irving_book_words %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 100))
+```
+
+
+## Sentiment Word cloud in Irving books
+
+```{r}
+library(reshape2)
+
+irving_book_words %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("gray20", "gray80"),
+                   max.words = 100)
+```
+
+# Loughran-McDonald sentiment lexicon
+
+```{r}
+get_sentiments("loughran") %>% 
+  filter(sentiment == "superfluous")
+```
+
+
+
+
+```{r message=FALSE, error=FALSE}
+
+library(pdftools)
+library(tm)
+library(downloader)
+library(tidyverse)
+library(tidytext)
+library(tesseract)
+
+# Download a demo pdf file
+pdf.file <- "https://github.com/baruab/msdsrepo/blob/main/DATA-607/Liability_not_Liability.pdf"
+
+# Extract the text for all pages
+#pdftext <- pdf_text("Liability_not_Liability.pdf")
+#, opw="", upw="")
+# Display the third page text
+#cat(pdf.text[[3]])
+
+
+#corp <- Corpus(URISource(files),
+#               readerControl = list(reader = readPDF))
+
+
+```
+

@@ -1,0 +1,95 @@
+---
+title: "DATA_607_Week9_Homework_Bikram"
+author: "Bikram Barua"
+date: "10/22/2021"
+output: rmdformats::readthedown
+---
+
+### Assignment – Web APIs
+
+### The New York Times web site provides a rich set of APIs, as described here: https://developer.nytimes.com/apis.
+### Task is to choose one of the New York Times APIs, construct an interface in R to read in the JSON data, and transform it into an R DataFrame.
+<br>
+
+##### Load the libraries
+```{r warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(httr)
+library(jsonlite)
+library(dplyr)
+library(listviewer)
+library(kableExtra)
+library(tidyverse)
+library(purrr)
+library(htmltools)
+```
+
+<br>
+
+# New York Times- Top(Technology) Stories API
+
+##### Call the API
+##### View the JSON data response attributes
+```{r warning=FALSE, message=FALSE}
+
+tech_response <- GET("https://api.nytimes.com/svc/topstories/v2/technology.json?api-key=97KSRsEE7aPgeEDTu3tZT4sVYND9NofH")
+
+raw_tech_json = fromJSON(rawToChar(tech_response$content))
+
+names(raw_tech_json)
+
+```
+
+<br>
+
+# Interactive `View` of the response
+```{r}
+
+
+# Interactive JSON results viewer
+listviewer::jsonedit(raw_tech_json$results, height = "400px", mode = "view")
+
+```
+
+<br>
+
+# Format date columns
+```{r}
+
+
+publish_date <- as.POSIXct( substr(raw_tech_json$results$published_date,1,10)  , format = "%Y-%m-%d")
+raw_tech_json$results$fmt_published_date <- format(publish_date, "%m/%d/%Y")
+
+
+create_date <- as.POSIXct( substr(raw_tech_json$results$created_date,1,10)  , format = "%Y-%m-%d")
+raw_tech_json$results$fmt_created_date <- format(create_date, "%m/%d/%Y")
+
+
+```
+
+
+# Converting JSON data into R dataframe
+```{r warning=FALSE, message=FALSE}
+
+# Get the Facet information by each story (row_n)
+get_facet_data <- function(row_n) {
+  purrr::pluck(raw_tech_json, "results", "des_facet", row_n)
+}
+
+# create the dataframe and tidy it up
+tech_stories_df <- pluck(raw_tech_json, "results") %>%
+  # convert to tibble
+  as_tibble() %>%
+  # select columns of interest
+  select(title, abstract, fmt_published_date, fmt_created_date ) %>%
+  mutate(data = map(row_number(), get_facet_data)) %>% 
+  unnest_wider(data) %>%
+  mutate(published_date =    )
+
+names(tech_stories_df) <- c('Title', 'Story Abstract', 'Published Date', 'Created Date', 'Facet 1', 'Facet 2', 'Facet 3', 'Facet 4', 
+                       'Facet 5', 'Facet 6', 'Facet 7', 'Facet 8', 'Facet 9', 'Facet 10', 'Facet 11', 'Facet 12', 'Facet 13' )
+
+
+knitr::kable(tech_stories_df, format = "html")
+```
+

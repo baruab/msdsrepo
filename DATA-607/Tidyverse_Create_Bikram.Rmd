@@ -1,0 +1,166 @@
+---
+title: "Tidyverse_Create_Bikram"
+author: "Bikram Barua"
+date: "10/24/2021"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggplot2)
+library(gridExtra)
+```
+
+# Heart Failure Prediction Dataset
+
+## 11 clinical features for predicting heart disease events.
+
+Source: https://www.kaggle.com/fedesoriano/heart-failure-prediction
+
+<br>
+
+```{r, warning=FALSE, message=FALSE}
+heart_failure_predictions <- read_csv("https://raw.githubusercontent.com/baruab/msdsrepo/main/DATA-607/heart_failure_prediction.csv")
+#,                  col_names = FALSE)
+
+head(heart_failure_predictions)
+```
+
+<br>
+
+##### glimpse () function provides a snapshot of the file in R. It tells number of Rows and Column with listing of the data/types of the columns.
+
+```{r}
+glimpse(heart_failure_predictions)
+```
+
+<br>
+
+### Give descriptive names to the columns
+
+```{r}
+names(heart_failure_predictions) <- c('Age', 'Sex', 'Chest_Pain_Type', 'Resting_Blood_Pressure', 'Cholesterol', 'Fasting_Blood_Sugar', 'Resting_ECG', 'Max_Heart_Rate', 'Excercise_Angina', 'Old_Peak', 'ST_Slope', 'Heart_Disease')
+
+
+
+```
+
+
+<br>
+
+
+##### List the unique types of chest pains
+```{r}
+unique(heart_failure_predictions$Chest_Pain_Type)
+```
+
+<br>
+
+### Converting the chest_pain acronyms to descriptive names
+```{r}
+
+pain_types <- c("ATA" = "Atypical Angina",
+                "NAP"= "Non-Anginal Pain",
+                "ASY"= "Asymptomatic",
+                "TA" = "Typical Angina")
+heart_failure_predictions$Chest_Pain_Type <- pain_types[heart_failure_predictions$Chest_Pain_Type]
+head(heart_failure_predictions)
+```
+
+<br>
+
+
+##### Barplots for Age, Resting BP and Max Heart Rate
+
+```{r}
+g1 <- ggplot(heart_failure_predictions, aes(Age)) + geom_bar() 
+g2 <- ggplot(heart_failure_predictions, aes(Resting_Blood_Pressure)) + geom_bar()
+g3 <- ggplot(heart_failure_predictions, aes(Max_Heart_Rate)) + geom_bar() 
+
+grid.arrange(g1, g2,g3, nrow=3)  
+```
+
+<br>
+
+
+##### Resting ST-T wave abnormalities have been associated with an increased risk of adverse cardiac events.
+
+```{r}
+# Filter by ECG ST abnormality
+ST_cases <-filter(heart_failure_predictions,Resting_ECG=="ST",Cholesterol > 200)
+```
+
+
+##### For cases with Resting ST-T wave abnormalities
+
+```{r}
+
+# Heart disease by Age,Resting BP with ST abnormalities
+ST_cases %>% ggplot()+
+  geom_bar(aes(Age,Resting_Blood_Pressure,fill=Heart_Disease),position="dodge",stat = "identity")+
+  theme(axis.text.x=element_text(angle=0))+
+  labs(x="Age",y="Resting BP", title="Statistics on heart disease by Age",
+       subtitle= "Heart disease by Age,Chest Pain Type, ST condition")
+
+
+```
+
+
+<br>
+
+
+##### For All cases (no filter)
+
+
+```{r}
+
+# Heart disease by Age,Chest Pain Type, ST condition
+heart_failure_predictions %>% ggplot()+
+  geom_bar(aes(Age,Resting_Blood_Pressure,fill=Heart_Disease),position="dodge",stat = "identity")+
+  theme(axis.text.x=element_text(angle=0))+
+  labs(x="Age",y="Resting Blood Pressure", title="Statistics on heart disease by Age",
+       subtitle= "Heart disease by Age,Chest Pain Type, ST condition")
+
+```
+
+
+
+<br>
+
+##### Fo All cases by Age, Resting BP and Chest Pain Type
+
+
+```{r}
+
+# Scatter Plot by Age, Resting BP and Chest Pain Type
+
+s1 <- ggplot(heart_failure_predictions, aes( Resting_Blood_Pressure, Age, color = Excercise_Angina)) + 
+  geom_point()
+
+s2 <- ggplot(heart_failure_predictions, aes( Max_Heart_Rate, Age, color = Excercise_Angina)) + 
+  geom_point()
+
+
+s3 <- ggplot(heart_failure_predictions, aes( Resting_Blood_Pressure, Age, color = Sex)) + 
+  geom_point()
+
+s4 <- ggplot(heart_failure_predictions, aes( Max_Heart_Rate, Age, color = Sex)) + 
+  geom_point()
+
+
+grid.arrange(s1, s2, s3, s4,  nrow = 4)
+
+```
+
+
+
+
+
+
+
+### Conclusion
+
+##### This is to summarise few capabilities of using R Tidyverse to manipulate and interpret using the types of visualisations. Tidyverse can accomodate more continuous and categorical variables to see if there is a relationship or causation exist in a particular situation.

@@ -1,0 +1,165 @@
+---
+title: "tidyverse_extend vignette"
+author: "Bikram Barua - Javier Pajuelo Bazan"
+date: "11/13/2021"
+output:
+  prettydoc::html_pretty:
+  theme: cayman
+highlight: github
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## OVERVIEW
+TidyVerse CREATE assignment
+
+Your task here is to Create an Example.  Using one or more TidyVerse packages, and any dataset from fivethirtyeight.com or Kaggle,
+create a programming sample “vignette” that demonstrates how to use one or more of the capabilities of the selected TidyVerse
+package with your selected dataset. (25 points)
+
+We are using the kaggle URL:
+  https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009?select=winequality-red.csv
+
+```{r, warning=FALSE,message=FALSE, echo=TRUE}
+WINE_QUALITY_RAW_URL <- 'https://raw.githubusercontent.com/quaere1verum/sps_public/master/data607-001/assignments/tidyverse_assignments/winequality-red.csv'
+library(curl)
+# using tidy verse packages
+# -- Attaching packages -------------------------------------------------------------------------------------------------- tidyverse 1.3.1 --
+#   v ggplot2 3.3.5     v purrr   0.3.4
+# v tibble  3.1.3     v stringr 1.4.0
+# v tidyr   1.1.3     v forcats 0.5.1
+# v readr   2.0.1     
+library(tidyverse)            
+```
+
+
+## Using readr package from tidyverse
+Readr package contains the read_csv function required to load our data.
+
+```{r, warning=FALSE,message=FALSE, echo=TRUE}
+load_csv_from_url <- function(url_path)
+{
+  tmp <- tempfile()
+  curl_download(url_path, tmp)
+  read_csv(tmp)               # read_csv() requires dependencies from tidyverse, readr package 
+}
+wine_quality_data <- load_csv_from_url(WINE_QUALITY_RAW_URL)
+```
+
+## Using purr package from tidyverse
+Purr package has functions like maps data to functions and returns vectors.
+
+```{r ,message=FALSE, echo=TRUE}
+# using purr package from tidyverse
+wine_quality_data %>%
+  split(.$alcohol) %>% # from base R
+  map(~ lm(`volatile acidity` ~ `citric acid`, data = .)) %>%
+  map(summary) %>%
+  map_dbl("r.squared")  # map_dbl is a purr function returns double vectors
+```
+
+## Using gplot package from tidyverse
+Adding a few cool plots that show some kind of relationship between acidity and alcohol quantity and quality.
+
+```{r ,message=FALSE, echo=TRUE}
+ggplot(wine_quality_data, aes(`fixed acidity`, `volatile acidity`, colour = alcohol)) + 
+  geom_point()
+```
+
+```{r ,message=FALSE, echo=TRUE}
+ggplot(wine_quality_data, aes(`fixed acidity`, `volatile acidity`, colour = quality)) + 
+  geom_point()
+```
+
+
+## Extending - Bikram Barua
+```{r ,message=FALSE, echo=TRUE}
+##  Stacked bar graph 
+ggplot(wine_quality_data, aes(fill=`fixed acidity`, y=`volatile acidity`, x=quality)) + 
+    geom_bar(position="stack", stat="identity") + ggtitle("Wine quality By Acidity")
+```
+
+
+```{r}
+library(ggpubr) # for arranging plots
+# ex. 1
+sulphur <- ggplot(wine_quality_data, aes( y=sulphates, x=alcohol)) + 
+  geom_bar(position="stack", stat="identity") +
+  ggtitle("Sulphur by Alcohol percent") +
+  scale_fill_manual(values = c("cyan3","black","brown"))
+
+# ex. 2
+pH <- ggplot(wine_quality_data, aes( y=pH, x=`fixed acidity`)) + 
+  geom_bar(position="stack", stat="identity") +
+  ggtitle("pH By Acidity") +
+  scale_fill_manual(values = c("greenyellow","grey80","orangered"))
+
+alcohol <- ggplot(wine_quality_data, aes( y=alcohol, x=quality)) + 
+  geom_bar(position="stack", stat="identity") +
+  ggtitle("Alcohol percent By Quality") +
+  scale_fill_manual(values = c("cyan3","black","brown"))
+
+
+pH_quality <- ggplot(wine_quality_data, aes( y=pH, x=quality)) + 
+  geom_bar(position="stack", stat="identity") +
+  ggtitle("pH By Quality") +
+  scale_fill_manual(values = c("greenyellow","grey80","orangered"))
+
+acidity_quality <- ggplot(wine_quality_data, aes( y=`fixed acidity`, x=quality)) + 
+  geom_bar(position="stack", stat="identity") +
+  ggtitle("Acidity By Quality") +
+  scale_fill_manual(values = c("greenyellow","grey80","orangered"))
+
+
+desity_quality <- ggplot(wine_quality_data, aes( y=density, x=quality)) + 
+  geom_bar(position="stack", stat="identity") +
+  ggtitle("Density By Quality") +
+  scale_fill_manual(values = c("greenyellow","grey80","orangered"))
+
+# Put plots together
+ggarrange(sulphur, pH, alcohol, pH_quality,acidity_quality,desity_quality, ncol = 2, nrow = 3)
+
+```
+  
+```{r warning=FALSE, message=FALSE}
+library(dplyr)
+
+
+total_wine_data <-  wine_quality_data   %>%  mutate(total_acidity = `fixed acidity` + `volatile acidity` + `citric acid` ) 
+
+```
+
+##### *filter* Observations where Quality > 6  
+```{r}
+quality5_data  <- total_wine_data %>%   select(c('total sulfur dioxide', 'pH', 'sulphates', alcohol, total_acidity, quality )) %>% filter(quality >= 5) %>% arrange(desc(quality))
+quality5_data
+```
+
+## ggplot2 package  
+
+### *Scatterplot*  
+
+```{r}
+ggplot(data = quality5_data, aes(x = quality, y = alcohol)) + geom_point()
+```
+
+
+```{r}
+ggplot(data = quality5_data, aes(x = quality , y = total_acidity)) + geom_point(alpha = 0.5) + 
+  labs(title = "Acidity vs. Quality") + theme_bw()
+
+ggplot(data = quality5_data, aes(x = quality , y = sulphates)) + geom_point(alpha = 0.5) + 
+  labs(title = "sulphates vs. Quality") + theme_bw()
+
+ggplot(data = quality5_data, aes(x = quality , y = pH)) + geom_point(alpha = 0.5) + 
+  labs(title = "pH vs. Quality") + theme_bw()
+
+```
+
+## Conclusion
+Based on the data there is no conclusive evidence to determine quality of red wine depending on acidity, pH value, sulphates and alcohol percent.
+It is found that good quality red wines have lower counts of the above in general compared to the regular wines. One can say, sulphates is definitely less in the good wines. Other than that, I did not find any conclusive evidence using the given dataset.
+
+
+
